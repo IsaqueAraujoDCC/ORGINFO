@@ -20,15 +20,20 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.bumptech.glide.annotation.GlideModule;
+import com.bumptech.glide.module.AppGlideModule;
 
 public class TelaPrincipal extends AppCompatActivity {
     private RecyclerView recyclerView;
@@ -36,18 +41,32 @@ public class TelaPrincipal extends AppCompatActivity {
     private ArrayList<Publicacao> mListaItens = new ArrayList<Publicacao>();
     private DatabaseReference firebaseDatabase = FirebaseDatabase.getInstance().getReference();
     private DatabaseReference posts = firebaseDatabase.child("Posts");
+    private DatabaseReference usuarioLogado = firebaseDatabase.child("usuarios").child(ConfiguracaoFirebase.getFirebaseAuth().getUid()).child("username");
+    private String nomeUsuarioLogado;
     private FirebaseAuth firebaseAuth;
+    private FirebaseStorage storage = FirebaseStorage.getInstance();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tela_principal);
         firebaseAuth = ConfiguracaoFirebase.getFirebaseAuth();
+        usuarioLogado.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                nomeUsuarioLogado = dataSnapshot.getValue().toString();
+                Log.d("nomeusuario", nomeUsuarioLogado);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
         recyclerView = (RecyclerView)findViewById(R.id.listaPost);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(layoutManager);
         adapterLista = new DrawerListAdapter(TelaPrincipal.this, mListaItens);
         recyclerView.setAdapter(adapterLista);
-
         posts.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -159,7 +178,7 @@ public class TelaPrincipal extends AppCompatActivity {
                         @Override
                         public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                             for(DataSnapshot dataSnapshot1: dataSnapshot.getChildren()){
-                                if(dataSnapshot1.getKey().equals("lara")){
+                                if(dataSnapshot1.getKey().equals(nomeUsuarioLogado)){
                                     System.out.println("key =: "+  dataSnapshot1.getKey());
                                     posts.child(mItens.get(position).getId()).child("comentarios").child(selected).removeValue();
                                 }
@@ -180,13 +199,17 @@ public class TelaPrincipal extends AppCompatActivity {
                     posts.child(mItens.get(position).getId()).child("comentarios").push().child("isaque").setValue(meuComentario);*/
                 }
             });
-            new DownloadImageTask(holder.imageView).execute(mItens.get(position).getEndereco());
+            //new DownloadImageTask(holder.imageView).execute(mItens.get(position).getEndereco());
+            StorageReference httpsReference = storage.getReferenceFromUrl(mItens.get(position).getEndereco());
+            Glide.with(getApplicationContext())
+                    .load(httpsReference)
+                    .into(holder.imageView);
             holder.addComentariobt.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     String meuComentario = holder.addComentario.getText().toString();
                     mItens.get(position).setMeuComentario(meuComentario);
-                    posts.child(mItens.get(position).getId()).child("comentarios").push().child("isaque").setValue(meuComentario);
+                    posts.child(mItens.get(position).getId()).child("comentarios").push().child(nomeUsuarioLogado).setValue(meuComentario);
                 }
             });
             if(mItens.get(position).isCurti() == true){

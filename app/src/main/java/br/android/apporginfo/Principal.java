@@ -24,7 +24,7 @@ public class Principal extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_principal);
         firebaseAuth = FirebaseAuth.getInstance();
-        firebaseAuth.signOut();
+        //firebaseAuth.signOut();
         if(firebaseAuth.getCurrentUser() !=null){
             handler = new Handler();
             handler.postDelayed(new Runnable() {
